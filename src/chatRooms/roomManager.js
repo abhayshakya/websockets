@@ -1,7 +1,7 @@
 const rooms = new Map();
 //roomname -> set of usernames
 
-export const joinRoom = (roomName, username) => {
+export const joinChatRoom = (roomName, username) => {
     if(!rooms.has(roomName)) {
         rooms.set(roomName, new Set());
     }
@@ -9,10 +9,12 @@ export const joinRoom = (roomName, username) => {
     rooms.get(roomName).add(username);
 };
 
-export const leaveRooms = (roomName, username) => {
-    if (!roomName.has(roomName)) return;
+export const leaveChatRoom = (roomName, username) => {
+    if (!rooms.has(roomName)) return;
 
     const roomUsers = rooms.get(roomName);
+    if (!roomUsers) return;
+
     roomUsers.delete(username);
 
     //clean empty room
