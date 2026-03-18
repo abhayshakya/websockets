@@ -21,6 +21,16 @@ ws.on("message", (data) => {
   rl.prompt();
 });
 
+ws.on("close", () => {
+    console.log("Received:", data.toString());
+    process.exit(0);
+})
+
+ws.on("error", (err) =>{
+    console.error("Connection error", err.message);
+    process.exit(0);
+});
+
 rl.on("line", (line) => {
   line = line.trim();
   if (!line) return rl.prompt();
@@ -31,13 +41,19 @@ rl.on("line", (line) => {
   switch (command) {
     case "join": {
       const username = args[1];
-      if (!username) return console.log("Usage: join <username>");
+      if (!username) {
+        console.log("Usage: join <username>");
+        break;
+      }
       ws.send(JSON.stringify({ type: "join", username }));
       break;
     }
     case "room": {
       const roomName = args[1];
-      if (!roomName) return console.log("Usage: room <roomname>");
+      if (!roomName) {
+        console.log("Usage: room <roomname>");
+        break;
+      }
       ws.send(JSON.stringify({ type: "join-room", room: roomName }));
       joinedRoom = true;
       break;
