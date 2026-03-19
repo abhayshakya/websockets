@@ -1,48 +1,47 @@
 const ws = new WebSocket("ws://localhost:8000");
 
 let username = "";
-let currentRoom = "";
 
 const chatBox = document.getElementById("chat");
 
-function log(message) {
+function addMessage(text, className) {
   const div = document.createElement("div");
-  div.innerText = message;
+  div.className = `message ${className}`;
+  div.innerText = text;
+
   chatBox.appendChild(div);
   chatBox.scrollTop = chatBox.scrollHeight;
 }
 
-// connect
 ws.onopen = () => {
-  log("✅ Connected to server");
+  addMessage("Connected to server", "system");
 };
 
-// receive messages
 ws.onmessage = (event) => {
   const data = JSON.parse(event.data);
 
   if (data.type === "system") {
-    log(`⚙️ ${data.message}`);
+    addMessage(data.message, "system");
   }
 
   if (data.type === "self") {
-    log(`🟢 You: ${data.message}`);
+    addMessage(`You: ${data.message}`, "self");
   }
 
   if (data.type === "chat-room") {
-    log(`🔵 ${data.username}: ${data.message}`);
+    addMessage(`${data.username}: ${data.message}`, "other");
   }
 
   if (data.type === "private") {
-    log(`🔒 ${data.username} (private): ${data.message}`);
+    addMessage(`(Private) ${data.username}: ${data.message}`, "private");
   }
 
   if (data.type === "room-users") {
-    log(`👥 Users in room: ${data.users.join(", ")}`);
+    addMessage(`Users: ${data.users.join(", ")}`, "system");
   }
 };
 
-// join user
+// actions
 function join() {
   username = document.getElementById("username").value;
 
@@ -52,25 +51,23 @@ function join() {
   }));
 }
 
-// join room
 function joinRoom() {
-  currentRoom = document.getElementById("room").value;
+  const room = document.getElementById("room").value;
 
   ws.send(JSON.stringify({
     type: "join-room",
-    room: currentRoom
+    room
   }));
 }
 
-// send message
 function sendMessage() {
-  const messageInput = document.getElementById("message");
-  const message = messageInput.value;
+  const input = document.getElementById("message");
+  const message = input.value;
 
   ws.send(JSON.stringify({
     type: "chat",
     message
   }));
 
-  messageInput.value = "";
+  input.value = "";
 }
