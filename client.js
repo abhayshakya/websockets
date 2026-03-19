@@ -3,93 +3,77 @@ import readline from "readline";
 
 const ws = new WebSocket("ws://localhost:8000");
 
-let joinedRoom = false;
+let isJoined = false;
 
 const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout,
-    prompt: "> "
+  input: process.stdin,
+  output: process.stdout,
+  prompt: "> "
 });
 
 ws.on("open", () => {
-    console.log("Connected to server");
-    rl.prompt();
+  console.log("Connected to server");
+  rl.prompt();
 });
 
 ws.on("message", (data) => {
-    console.log("Received:", data.toString());
-    rl.prompt();
-});
+  const msg = JSON.parse(data.toString());
 
-ws.on("close", () => {
-    console.log("Received:", data.toString());
-    process.exit(0);
-})
+  console.log("Received:", msg);
 
-ws.on("error", (err) => {
-    console.error("Connection error", err.message);
-    process.exit(0);
+  if (msg.type === "system" && msg.message.startsWith("Welcome")) {
+    isJoined = true;
+  }
+
+  rl.prompt();
 });
 
 rl.on("line", (line) => {
-    line = line.trim();
-    if (!line) return rl.prompt();
+  const input = line.trim();
 
-    const args = line.split(" ");
-    const command = args[0].toLowerCase();
+  if (input.startsWith("join ")) {
+    const username = input.split(" ")[1];
 
-    switch (command) {
-        case "join": {
-            const username = args[1];
-            if (!username) {
-                console.log("Usage: join <username>");
-                break;
-            }
-            ws.send(JSON.stringify({ type: "join", username }));
-            break;
-        }
-        case "room": {
-            const roomName = args[1];
-            if (!roomName) {
-                console.log("Usage: room <roomname>");
-                break;
-            }
-            ws.send(JSON.stringify({ type: "join-room", room: roomName }));
-            joinedRoom = true;
-            break;
-        }
-        case "private": {
-            const target = args[1];
-            const message = args.slice(2).join(" ");
-            if (!target || !message) {
-                console.log("Usage: private <user> <message>");
-                break;
-            }
-            ws.send(JSON.stringify({ type: "private", to: target, message }));
-            break;
-        }
-        case "chat": {
-            if (!joinedRoom) {
-                console.log("You must join a room first.");
-                break;
-            }
-            const message = args.slice(1).join(" ");
-            if (!message) {
-                console.log("Usage: chat <message>");
-                break;
-            }
-            ws.send(JSON.stringify({ type: "chat", message }));
-            break;
-        }
-        default: {
-            // If already joined a room, treat anything typed as a chat message
-            if (joinedRoom) {
-                ws.send(JSON.stringify({ type: "chat", message: line }));
-            } else {
-                console.log("Unknown command. Use join, room, chat, private");
-            }
-        }
+    ws.send(JSON.stringify({
+      type: "join",
+      username
+    }));
+
+  } else if (input.startsWith("room ")) {
+
+    if (!isJoined) {
+      console.log("⚠️ Join first");
+      rl.prompt();
+      return;
     }
 
-    rl.prompt();
+    const room = input.split(" ")[1];
+
+    ws.send(JSON.stringify({
+      type: "join-room",
+      room
+    }));
+
+  } else if (input.startsWith("chat ")) {
+    const message = input.slice(5);
+
+    ws.send(JSON.stringify({
+      type: "chat",
+      message
+    }));
+
+  } else if (input.startsWith("private ")) {
+    const [, to, ...msg] = input.split(" ");
+
+    ws.send(JSON.stringify({
+      type: "private",
+      to,
+      message: msg.join(" ")
+    }));
+
+  } else {
+    console.log("Commands: join, room, chat, private");
+  }
+
+  rl.prompt();
 });

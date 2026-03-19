@@ -8,14 +8,12 @@ const server = http.createServer(app);
 
 const wss = new WebSocketServer({ server });
 
-const PORT = 8000;
-
 app.get("/", (req, res) => {
-    res.send("Server is running");
+  res.send("Server running");
 });
 
 setupWebSocket(wss);
 
-server.listen(PORT, () => {
-    console.log(`HTTP + WS server running on http://localhost:${PORT}`);
+server.listen(8000, () => {
+  console.log("HTTP + WS running on http://localhost:8000");
 });
