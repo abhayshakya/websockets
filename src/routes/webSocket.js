@@ -130,6 +130,21 @@ export function setupWebSocket(wss) {
           }
         });
 
+        const userList = [...getRoomUsers(roomName)];
+
+        userList.forEach((user) => {
+          const clientWs = users.get(user);
+
+          if(clientWs?.readyState === WebSocket.OPEN) {
+            clientWs.send(JSON.stringify({
+              type: 'room-users',
+              room: roomName,
+              users: userList,
+              timestamp: new Date().toISOString()
+            }));
+          }
+        });
+
         return;
       }
       
@@ -243,15 +258,15 @@ export function setupWebSocket(wss) {
 
         console.log(`${username} [${currentRoom}: ${parsed.message}]`);
 
-        users.forEach((clientWs, clientName) => {
-          if (clientWs.readyState === WebSocket.OPEN) {
-            if (clientName === username) {
-              clientWs.send(JSON.stringify(chatMessageForSender));
-            } else {
-              clientWs.send(JSON.stringify(chatMessageForOthers));
-            }
-          }
-        });
+        // users.forEach((clientWs, clientName) => {
+        //   if (clientWs.readyState === WebSocket.OPEN) {
+        //     if (clientName === username) {
+        //       clientWs.send(JSON.stringify(chatMessageForSender));
+        //     } else {
+        //       clientWs.send(JSON.stringify(chatMessageForOthers));
+        //     }
+        //   }
+        // });
 
         console.log(`${username} : ${parsed.message}`);
       }
