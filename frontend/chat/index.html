@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>WebSocket Chat</title>
+  <style>
+    body {
+      font-family: Arial;
+      margin: 20px;
+    }
+
+    #chat {
+      border: 1px solid #ccc;
+      height: 300px;
+      overflow-y: auto;
+      padding: 10px;
+      margin-bottom: 10px;
+    }
+
+    input {
+      padding: 8px;
+      margin: 5px;
+    }
+
+    button {
+      padding: 8px 12px;
+    }
+  </style>
+</head>
+<body>
+
+<h2>WebSocket Chat</h2>
+
+<div>
+  <input id="username" placeholder="Enter username" />
+  <button onclick="join()">Join</button>
+</div>
+
+<div>
+  <input id="room" placeholder="Enter room" />
+  <button onclick="joinRoom()">Join Room</button>
+</div>
+
+<div id="chat"></div>
+
+<input id="message" placeholder="Type message..." />
+<button onclick="sendMessage()">Send</button>
+
+<script src="./chatfront.js"></script>
+
+</body>
+</html>
