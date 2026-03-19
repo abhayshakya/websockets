@@ -3,6 +3,9 @@ const ws = new WebSocket("ws://localhost:8000");
 let username = "";
 
 const chatBox = document.getElementById("chat");
+const usernameInput = document.getElementById("username");
+const roomInput = document.getElementById("room");
+const messageInput = document.getElementById("message");
 
 function addMessage(text, className) {
   const div = document.createElement("div");
@@ -20,54 +23,40 @@ ws.onopen = () => {
 ws.onmessage = (event) => {
   const data = JSON.parse(event.data);
 
-  if (data.type === "system") {
-    addMessage(data.message, "system");
-  }
-
-  if (data.type === "self") {
-    addMessage(`You: ${data.message}`, "self");
-  }
-
-  if (data.type === "chat-room") {
-    addMessage(`${data.username}: ${data.message}`, "other");
-  }
-
-  if (data.type === "private") {
-    addMessage(`(Private) ${data.username}: ${data.message}`, "private");
-  }
-
-  if (data.type === "room-users") {
-    addMessage(`Users: ${data.users.join(", ")}`, "system");
-  }
+  if (data.type === "system") log(`⚙️ ${data.message}`);
+  if (data.type === "self") log(`🟢 You: ${data.message}`);
+  if (data.type === "chat-room") log(`🔵 ${data.username}: ${data.message}`);
+  if (data.type === "private") log(`🔒 ${data.username} (private): ${data.message}`);
+  if (data.type === "room-users") log(`👥 Users in room: ${data.users.join(", ")}`);
 };
 
-// actions
-function join() {
-  username = document.getElementById("username").value;
+// Trigger join on Enter
+usernameInput.addEventListener("keypress", (e) => {
+  if (e.key === "Enter") join();
+});
+roomInput.addEventListener("keypress", (e) => {
+  if (e.key === "Enter") joinRoom();
+});
+messageInput.addEventListener("keypress", (e) => {
+  if (e.key === "Enter") sendMessage();
+});
 
-  ws.send(JSON.stringify({
-    type: "join",
-    username
-  }));
+// join user
+function join() {
+  username = usernameInput.value.trim();
+  if (!username) return;
+  ws.send(JSON.stringify({ type: "join", username }));
 }
 
 function joinRoom() {
-  const room = document.getElementById("room").value;
-
-  ws.send(JSON.stringify({
-    type: "join-room",
-    room
-  }));
+  currentRoom = roomInput.value.trim();
+  if (!currentRoom) return;
+  ws.send(JSON.stringify({ type: "join-room", room: currentRoom }));
 }
 
 function sendMessage() {
-  const input = document.getElementById("message");
-  const message = input.value;
-
-  ws.send(JSON.stringify({
-    type: "chat",
-    message
-  }));
-
-  input.value = "";
+  const message = messageInput.value.trim();
+  if (!message || !currentRoom) return;
+  ws.send(JSON.stringify({ type: "chat", message }));
+  messageInput.value = "";
 }
