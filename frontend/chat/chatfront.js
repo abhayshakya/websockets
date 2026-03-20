@@ -1,25 +1,26 @@
 const ws = new WebSocket("ws://localhost:8000");
 
 let username = "";
+let currentRoom = "";
 
 const chatBox = document.getElementById("chat");
 const usernameInput = document.getElementById("username");
 const roomInput = document.getElementById("room");
 const messageInput = document.getElementById("message");
 
-function addMessage(text, className) {
+function log(message) {
   const div = document.createElement("div");
-  div.className = `message ${className}`;
-  div.innerText = text;
-
+  div.innerText = message;
   chatBox.appendChild(div);
   chatBox.scrollTop = chatBox.scrollHeight;
 }
 
+// connect
 ws.onopen = () => {
-  addMessage("Connected to server", "system");
+  log("✅ Connected to server");
 };
 
+// receive messages
 ws.onmessage = (event) => {
   const data = JSON.parse(event.data);
 
@@ -48,12 +49,14 @@ function join() {
   ws.send(JSON.stringify({ type: "join", username }));
 }
 
+// join room
 function joinRoom() {
   currentRoom = roomInput.value.trim();
   if (!currentRoom) return;
   ws.send(JSON.stringify({ type: "join-room", room: currentRoom }));
 }
 
+// send message
 function sendMessage() {
   const message = messageInput.value.trim();
   if (!message || !currentRoom) return;
