@@ -33,22 +33,13 @@ ws.onmessage = (event) => {
 
 // Trigger join on Enter
 usernameInput.addEventListener("keypress", (e) => {
-  if (e.key === "Enter"){
-    e.preventDefault();
-    join();
-  }
+  if (e.key === "Enter") join();
 });
 roomInput.addEventListener("keypress", (e) => {
-  if (e.key === "Enter"){
-    e.preventDefault();
-     joinRoom();
-  }
+  if (e.key === "Enter") joinRoom();
 });
 messageInput.addEventListener("keypress", (e) => {
-  if (e.key === "Enter") {
-    e.preventDefault();
-    sendMessage();
-  }
+  if (e.key === "Enter") sendMessage();
 });
 
 // join user
