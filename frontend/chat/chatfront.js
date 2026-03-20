@@ -1,4 +1,9 @@
-const ws = new WebSocket("ws://localhost:8000");
+const wsUrl = window.CHAT_WS_URL || (() => {
+  const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+  return `${wsProtocol}//${window.location.host}`;
+})();
+
+const ws = new WebSocket(wsUrl);
 
 let username = "";
 let currentRoom = "";
@@ -22,7 +27,13 @@ ws.onopen = () => {
 
 // receive messages
 ws.onmessage = (event) => {
-  const data = JSON.parse(event.data);
+let data;
+try {
+  data = JSON.parse(event.data);
+} catch (e) {
+  log('Received invalid message from server');
+  return;
+}
 
   if (data.type === "system") log(`⚙️ ${data.message}`);
   if (data.type === "self") log(`🟢 You: ${data.message}`);
@@ -33,15 +44,15 @@ ws.onmessage = (event) => {
 
 // Trigger join on Enter
 usernameInput.addEventListener("keypress", (e) => {
-  if (e.key === "Enter"){
+  if (e.key === "Enter") {
     e.preventDefault();
     join();
   }
 });
 roomInput.addEventListener("keypress", (e) => {
-  if (e.key === "Enter"){
+  if (e.key === "Enter") {
     e.preventDefault();
-     joinRoom();
+    joinRoom();
   }
 });
 messageInput.addEventListener("keypress", (e) => {
