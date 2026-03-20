@@ -1,73 +1,74 @@
 const ws = new WebSocket("ws://localhost:8000");
 
 let username = "";
+let currentRoom = "";
 
 const chatBox = document.getElementById("chat");
+const usernameInput = document.getElementById("username");
+const roomInput = document.getElementById("room");
+const messageInput = document.getElementById("message");
 
-function addMessage(text, className) {
+function log(message) {
   const div = document.createElement("div");
-  div.className = `message ${className}`;
-  div.innerText = text;
-
+  div.innerText = message;
   chatBox.appendChild(div);
   chatBox.scrollTop = chatBox.scrollHeight;
 }
 
+// connect
 ws.onopen = () => {
-  addMessage("Connected to server", "system");
+  log("✅ Connected to server");
 };
 
+// receive messages
 ws.onmessage = (event) => {
   const data = JSON.parse(event.data);
 
-  if (data.type === "system") {
-    addMessage(data.message, "system");
-  }
-
-  if (data.type === "self") {
-    addMessage(`You: ${data.message}`, "self");
-  }
-
-  if (data.type === "chat-room") {
-    addMessage(`${data.username}: ${data.message}`, "other");
-  }
-
-  if (data.type === "private") {
-    addMessage(`(Private) ${data.username}: ${data.message}`, "private");
-  }
-
-  if (data.type === "room-users") {
-    addMessage(`Users: ${data.users.join(", ")}`, "system");
-  }
+  if (data.type === "system") log(`⚙️ ${data.message}`);
+  if (data.type === "self") log(`🟢 You: ${data.message}`);
+  if (data.type === "chat-room") log(`🔵 ${data.username}: ${data.message}`);
+  if (data.type === "private") log(`🔒 ${data.username} (private): ${data.message}`);
+  if (data.type === "room-users") log(`👥 Users in room: ${data.users.join(", ")}`);
 };
 
-// actions
+// Trigger join on Enter
+usernameInput.addEventListener("keypress", (e) => {
+  if (e.key === "Enter"){
+    e.preventDefault();
+    join();
+  }
+});
+roomInput.addEventListener("keypress", (e) => {
+  if (e.key === "Enter"){
+    e.preventDefault();
+     joinRoom();
+  }
+});
+messageInput.addEventListener("keypress", (e) => {
+  if (e.key === "Enter") {
+    e.preventDefault();
+    sendMessage();
+  }
+});
+
+// join user
 function join() {
-  username = document.getElementById("username").value;
-
-  ws.send(JSON.stringify({
-    type: "join",
-    username
-  }));
+  username = usernameInput.value.trim();
+  if (!username) return;
+  ws.send(JSON.stringify({ type: "join", username }));
 }
 
+// join room
 function joinRoom() {
-  const room = document.getElementById("room").value;
-
-  ws.send(JSON.stringify({
-    type: "join-room",
-    room
-  }));
+  currentRoom = roomInput.value.trim();
+  if (!currentRoom) return;
+  ws.send(JSON.stringify({ type: "join-room", room: currentRoom }));
 }
 
+// send message
 function sendMessage() {
-  const input = document.getElementById("message");
-  const message = input.value;
-
-  ws.send(JSON.stringify({
-    type: "chat",
-    message
-  }));
-
-  input.value = "";
+  const message = messageInput.value.trim();
+  if (!message || !currentRoom) return;
+  ws.send(JSON.stringify({ type: "chat", message }));
+  messageInput.value = "";
 }
