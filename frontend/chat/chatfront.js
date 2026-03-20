@@ -44,6 +44,7 @@ try {
 
 // Trigger join on Enter
 usernameInput.addEventListener("keypress", (e) => {
+<<<<<<< HEAD
   if (e.key === "Enter") {
     e.preventDefault();
     join();
@@ -54,12 +55,15 @@ roomInput.addEventListener("keypress", (e) => {
     e.preventDefault();
     joinRoom();
   }
+=======
+  if (e.key === "Enter") join();
+});
+roomInput.addEventListener("keypress", (e) => {
+  if (e.key === "Enter") joinRoom();
+>>>>>>> 75c1f61870430757929dcf309f8757de09a3d666
 });
 messageInput.addEventListener("keypress", (e) => {
-  if (e.key === "Enter") {
-    e.preventDefault();
-    sendMessage();
-  }
+  if (e.key === "Enter") sendMessage();
 });
 
 // join user
