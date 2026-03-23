@@ -11,12 +11,20 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const server = http.createServer(app);
 
+server.on("upgrade", (req, socket, head) => {
+  console.log("WS Upgrade request received");
+});
+
 const wss = new WebSocketServer({ server });
 
 // ✅ serve frontend
 app.use(express.static(path.join(__dirname, "frontend")));
 
 setupWebSocket(wss);
+
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "frontend", "index.html"));
+});
 
 server.listen(8000, () => {
   console.log("HTTP + WS running on http://localhost:8000");
