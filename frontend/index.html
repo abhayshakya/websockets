@@ -94,6 +94,19 @@
       gap: 5px;
     }
   </style>
+
+  <script>
+  {
+    // Check if user is logged in
+    const cachedToken = localStorage.getItem("chatToken");
+    const cachedUser = localStorage.getItem("chatUser");
+
+    if (!cachedToken || !cachedUser) {
+      // No login info → redirect to login page
+      window.location.href = "login.html";
+    }
+  }
+  </script>
 </head>
 
 <body>
@@ -101,14 +114,14 @@
 <div class="container">
   <h2>💬 Chat</h2>
 
-  <div class="top-controls">
+  <!-- <div class="top-controls">
     <input id="username" placeholder="Username">
     <button onclick="join()">Join</button>
-  </div>
+  </div> -->
 
   <div class="top-controls">
     <input id="room" placeholder="Room">
-    <button onclick="joinRoom()">Room</button>
+    <button onclick="joinRoom()">Join Room</button>
   </div>
 
   <div id="chat"></div>
@@ -117,7 +130,20 @@
     <input id="message" placeholder="Type message...">
     <button onclick="sendMessage()">Send</button>
   </div>
+  
+  <div class="logout">
+    <button onclick="logout()">Logout</button>
+  </div>
+
 </div>
+
+<script>
+  function logout() {
+  localStorage.removeItem("chatToken");
+  localStorage.removeItem("chatUser");
+  window.location.href = "login.html";
+}
+</script>
 
 <script src="/chat/chatfront.js"></script>
 

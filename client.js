@@ -1,79 +1,128 @@
 import WebSocket from "ws";
 import readline from "readline";
+import fetch from "node-fetch"; // to call REST login
 
-const ws = new WebSocket("ws://localhost:8000");
+// ---- CONFIG ----
+const REST_URL = "http://localhost:8000/login"; // REST login endpoint
+const WS_URL = "ws://localhost:8000";           // WebSocket server
 
-let isJoined = false;
+// ---- STATE ----
+let username = "";
+let token = "";
+let currentRoom = "";
 
-const rl = readline.createInterface({
-  input: process.stdin,
-  output: process.stdout,
-  prompt: "> "
-});
+// ---- LOGIN FIRST ----
+async function loginUser() {
+  const rlLogin = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+  });
 
-ws.on("open", () => {
-  console.log("Connected to server");
-  rl.prompt();
-});
+  return new Promise((resolve) => {
+    rlLogin.question("Username: ", (u) => {
+      rlLogin.question("Password: ", async (p) => {
+        username = u.trim();
 
-ws.on("message", (data) => {
-  const msg = JSON.parse(data.toString());
+        try {
+          // Auto-register the user so that "invalid credentials" won't happen 
+          // on a fresh server restart where the in-memory database is empty.
+          await fetch("http://localhost:8000/register", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ username, password: p.trim() })
+          });
 
-  console.log("Received:", msg);
+          // Now attempt to login
+          const res = await fetch(REST_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ username, password: p.trim() })
+          });
+          const data = await res.json();
 
-  if (msg.type === "system" && msg.message.startsWith("Welcome")) {
-    isJoined = true;
-  }
+          if (data.success) {
+            token = data.token;
+            console.log("✅ Login successful, token received:", token);
+            rlLogin.close();
+            resolve();
+          } else {
+            console.log("❌ Login failed:", data.message || "Invalid credentials");
+            process.exit(1);
+          }
+        } catch (err) {
+          console.error("Error logging in:", err);
+          process.exit(1);
+        }
+      });
+    });
+  });
+}
 
-  rl.prompt();
-});
+// ---- MAIN CHAT ----
+async function startChat() {
+  const ws = new WebSocket(WS_URL);
 
-rl.on("line", (line) => {
-  const input = line.trim();
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+    prompt: "> "
+  });
 
-  if (input.startsWith("join ")) {
-    const username = input.split(" ")[1];
+  ws.on("open", () => {
+    console.log("Connected to server");
+    rl.prompt();
+  });
 
-    ws.send(JSON.stringify({
-      type: "join",
-      username
-    }));
+  ws.on("message", (data) => {
+    const msg = JSON.parse(data.toString());
+    console.log("Received:", msg);
+    rl.prompt();
+  });
 
-  } else if (input.startsWith("room ")) {
+  rl.on("line", (line) => {
+    const input = line.trim();
 
-    if (!isJoined) {
-      console.log("⚠️ Join first");
-      rl.prompt();
-      return;
+    if (input.startsWith("room ")) {
+      currentRoom = input.split(" ")[1];
+      ws.send(JSON.stringify({
+        type: "join-room",
+        room: currentRoom,
+        username,
+        token
+      }));
+
+    } else if (input.startsWith("chat ")) {
+      const message = input.slice(5);
+      if (!currentRoom) {
+        console.log("⚠️ Join a room first");
+      } else {
+        ws.send(JSON.stringify({
+          type: "chat",
+          message,
+          room: currentRoom,
+          username,
+          token
+        }));
+      }
+
+    } else if (input.startsWith("private ")) {
+      const [, to, ...msg] = input.split(" ");
+      ws.send(JSON.stringify({
+        type: "private",
+        to,
+        message: msg.join(" "),
+        username,
+        token
+      }));
+
+    } else {
+      console.log("Commands: room <name>, chat <msg>, private <user> <msg>");
     }
 
-    const room = input.split(" ")[1];
+    rl.prompt();
+  });
+}
 
-    ws.send(JSON.stringify({
-      type: "join-room",
-      room
-    }));
-
-  } else if (input.startsWith("chat ")) {
-    const message = input.slice(5);
-
-    ws.send(JSON.stringify({
-      type: "chat",
-      message
-    }));
-
-  } else if (input.startsWith("private ")) {
-    const [, to, ...msg] = input.split(" ");
-
-    ws.send(JSON.stringify({
-      type: "private",
-      to,
-      message: msg.join(" ")
-    }));
-
-  } else {
-    console.log("Commands: join, room, chat, private");
-  }
-
-  rl.prompt();
-});
+// ---- RUN ----
+await loginUser();
+await startChat();

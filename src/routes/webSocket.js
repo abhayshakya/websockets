@@ -1,10 +1,6 @@
 import WebSocket from "ws";
-
-import {
-  joinChatRoom,
-  leaveChatRoom,
-  getRoomUsers
-} from "../chatRooms/roomManager.js";
+import { validateToken } from "../auth/authManager.js";
+import { joinChatRoom, leaveChatRoom, getRoomUsers } from "../chatRooms/roomManager.js";
 
 export function setupWebSocket(wss) {
   const users = new Map(); // username -> ws
@@ -12,125 +8,52 @@ export function setupWebSocket(wss) {
   wss.on("connection", (ws) => {
     console.log("New Client Connected");
 
-    let username = null;
-    let currentRoom = null;
-
-    ws.send(JSON.stringify({
-      type: "welcome",
-      message: "Connected"
-    }));
+    ws.send(JSON.stringify({ type: "welcome", message: "Connected" }));
 
     ws.on("message", (message) => {
       let parsed;
-
       try {
         parsed = JSON.parse(message.toString());
       } catch {
-        ws.send(JSON.stringify({
-          type: "system",
-          message: "Invalid JSON"
-        }));
-        return;
-      }
-
-      // ---------------- JOIN ----------------
-      if (parsed.type === "join") {
-        if (!parsed.username || typeof parsed.username !== "string") {
-          ws.send(JSON.stringify({
-            type: "system",
-            message: "Invalid username"
-          }));
-          return;
-        }
-
-        const requestedUsername = parsed.username.toLowerCase();
-
-        // handle duplicate
-        if (users.has(requestedUsername)) {
-          const existing = users.get(requestedUsername);
-
-          if (existing.readyState === WebSocket.OPEN) {
-            existing.send(JSON.stringify({
-              type: "system",
-              message: "Disconnected: logged in elsewhere"
-            }));
-            existing.terminate();
-          }
-
-          users.delete(requestedUsername);
-        }
-
-        username = requestedUsername;
-        users.set(username, ws);
-
-        ws.send(JSON.stringify({
-          type: "system",
-          message: `Welcome ${username}`,
-          timestamp: new Date().toISOString()
-        }));
-
+        ws.send(JSON.stringify({ type: "system", message: "Invalid JSON" }));
         return;
       }
 
       // ---------------- JOIN ROOM ----------------
       if (parsed.type === "join-room") {
-        if (!username) {
-          ws.send(JSON.stringify({
-            type: "system",
-            message: "You must join first"
-          }));
+        const { username, room, token } = parsed;
+        if (!validateToken(username, token)) {
+          ws.send(JSON.stringify({ type: "system", message: "Unauthorized" }));
           return;
         }
 
-        const roomName = parsed.room?.toLowerCase();
-
+        ws.username = username;
+        const roomName = room?.toLowerCase();
         if (!roomName) {
-          ws.send(JSON.stringify({
-            type: "system",
-            message: "Invalid room"
-          }));
+          ws.send(JSON.stringify({ type: "system", message: "Invalid room" }));
           return;
         }
 
-        // leave previous
-        if (currentRoom) {
-          leaveChatRoom(currentRoom, username);
+        if (ws.currentRoom) {
+          leaveChatRoom(ws.currentRoom, ws.username);
         }
 
-        currentRoom = roomName;
-        joinChatRoom(roomName, username);
+        ws.currentRoom = roomName;
+        users.set(ws.username, ws);
+        joinChatRoom(roomName, ws.username);
 
         const timestamp = new Date().toISOString();
-
         ws.send(JSON.stringify({
           type: "system",
           message: `Joined room: ${roomName}`,
           timestamp
         }));
 
-        // notify room users
         const roomUsers = getRoomUsers(roomName);
-
-        roomUsers.forEach((user) => {
-          if (user !== username) {
-            const client = users.get(user);
-
-            if (client?.readyState === WebSocket.OPEN) {
-              client.send(JSON.stringify({
-                type: "system",
-                message: `${username} joined room ${roomName}`,
-                timestamp
-              }));
-            }
-          }
-        });
-
-        // send room user list
         const userList = Array.from(roomUsers);
 
         roomUsers.forEach((user) => {
           const client = users.get(user);
-
           if (client?.readyState === WebSocket.OPEN) {
             client.send(JSON.stringify({
               type: "room-users",
@@ -140,102 +63,47 @@ export function setupWebSocket(wss) {
             }));
           }
         });
-
         return;
       }
 
-      // ---------------- CHAT ROOM ----------------
+      // ---------------- CHAT ----------------
       if (parsed.type === "chat") {
-        if (!username) {
-          ws.send(JSON.stringify({
-            type: "system",
-            message: "Join first"
-          }));
+        const { message, room, token, username } = parsed;
+        const chatUsername = username || ws.username;
+        if (!ws.username || !validateToken(chatUsername, token)) {
+          ws.send(JSON.stringify({ type: "system", message: "Unauthorized" }));
           return;
         }
-
-        if (!currentRoom) {
-          ws.send(JSON.stringify({
-            type: "system",
-            message: "Join a room first"
-          }));
+        if (!ws.currentRoom) {
+          ws.send(JSON.stringify({ type: "system", message: "Join a room first" }));
           return;
         }
 
         const timestamp = new Date().toISOString();
-
-        const roomUsers = getRoomUsers(currentRoom);
+        const roomUsers = getRoomUsers(ws.currentRoom);
 
         roomUsers.forEach((user) => {
           const client = users.get(user);
           if (!client || client.readyState !== WebSocket.OPEN) return;
 
-          if (user === username) {
-            client.send(JSON.stringify({
-              type: "self",
-              username,
-              message: parsed.message,
-              room: currentRoom,
-              timestamp
-            }));
-          } else {
-            client.send(JSON.stringify({
-              type: "chat-room",
-              username,
-              message: parsed.message,
-              room: currentRoom,
-              timestamp
-            }));
-          }
+          client.send(JSON.stringify({
+            type: user === ws.username ? "self" : "chat-room",
+            username: ws.username,
+            message,
+            room: ws.currentRoom,
+            timestamp
+          }));
         });
 
-        console.log(`${username} [${currentRoom}]: ${parsed.message}`);
+        console.log(`${ws.username} [${ws.currentRoom}]: ${message}`);
         return;
-      }
-
-      // ---------------- PRIVATE ----------------
-      if (parsed.type === "private") {
-        if (!username) return;
-
-        const target = parsed.to?.toLowerCase();
-        const targetWs = users.get(target);
-
-        if (!targetWs) {
-          ws.send(JSON.stringify({
-            type: "system",
-            message: "User not online"
-          }));
-          return;
-        }
-
-        const timestamp = new Date().toISOString();
-
-        ws.send(JSON.stringify({
-          type: "self",
-          username,
-          message: parsed.message,
-          to: target,
-          timestamp
-        }));
-
-        targetWs.send(JSON.stringify({
-          type: "private",
-          username,
-          message: parsed.message,
-          to: target,
-          timestamp
-        }));
       }
     });
 
-    // ---------------- CLOSE ----------------
     ws.on("close", () => {
-      if (username) {
-        users.delete(username);
-
-        if (currentRoom) {
-          leaveChatRoom(currentRoom, username);
-        }
+      if (ws.username && ws.currentRoom) {
+        users.delete(ws.username);
+        leaveChatRoom(ws.currentRoom, ws.username);
       }
     });
   });

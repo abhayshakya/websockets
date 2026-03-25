@@ -1,23 +1,18 @@
-const wsUrl = window.CHAT_WS_URL || (() => {
-  if (window.location.host) {
-    const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    return `${wsProtocol}//${window.location.host}`;
-  }
-  // Direct file:// open fallback (still default old behavior for local dev)
-  return "ws://localhost:8000";
+const wsUrl = (() => {
+  const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+  return `${wsProtocol}//${window.location.host}`;
 })();
 
 const ws = new WebSocket(wsUrl);
 
-let username = "";
+let token = localStorage.getItem("chatToken");
+let username = localStorage.getItem("chatUser");
 let currentRoom = "";
 
 const chatBox = document.getElementById("chat");
-const usernameInput = document.getElementById("username");
 const roomInput = document.getElementById("room");
 const messageInput = document.getElementById("message");
 
-// helper to show messages
 function log(message) {
   const div = document.createElement("div");
   div.innerText = message;
@@ -25,124 +20,47 @@ function log(message) {
   chatBox.scrollTop = chatBox.scrollHeight;
 }
 
-// connected
-ws.onopen = () => {
-  console.log("Connected");
-  log("✅ Connected to server");
-};
+ws.onopen = () => log("✅ Connected to server");
+ws.onclose = (e) => console.log("Close", e.code, e.reason);
+ws.onerror = (e) => console.error("Error", e);
 
-ws.onclose = (e) =>{
-  console.log("Close", e.code, e.reason);
-};
-
-ws.onerror = (e) => {
-  console.error("Error", e);
-}
-
-// receive messages
 ws.onmessage = (event) => {
   let data;
-
-  try {
-    data = JSON.parse(event.data);
-  } catch {
-    log("❌ Invalid message from server");
-    return;
-  }
+  try { data = JSON.parse(event.data); }
+  catch { log("❌ Invalid message from server"); return; }
 
   switch (data.type) {
-    case "system":
-      log(`⚙️ ${data.message}`);
-      break;
-
-    case "self":
-      log(`🟢 You: ${data.message}`);
-      break;
-
-    case "chat-room":
-      log(`🔵 ${data.username}: ${data.message}`);
-      break;
-
-    case "private":
-      log(`🔒 ${data.username}: ${data.message}`);
-      break;
-
-    case "room-users":
-      log(`👥 Room users: ${data.users.join(", ")}`);
-      break;
-
-    default:
-      log(`📩 ${JSON.stringify(data)}`);
+    case "system": log(`⚙️ ${data.message}`); break;
+    case "self": log(`🟢 You: ${data.message}`); break;
+    case "chat-room": log(`🔵 ${data.username}: ${data.message}`); break;
+    case "private": log(`🔒 ${data.username}: ${data.message}`); break;
+    case "room-users": log(`👥 Room users: ${data.users.join(", ")}`); break;
+    default: log(`📩 ${JSON.stringify(data)}`);
   }
 };
 
-// join user
-function join() {
-  const value = usernameInput.value.trim();
-  if (!value) return;
-
-  username = value;
-
-  ws.send(JSON.stringify({
-    type: "join",
-    username
-  }));
-}
-
-// join room
 function joinRoom() {
   const value = roomInput.value.trim();
-  if (!value) return;
-
-  currentRoom = value;
-
-  ws.send(JSON.stringify({
-    type: "join-room",
-    room: currentRoom
-  }));
-}
-
-// send message
-function sendMessage() {
-  const message = messageInput.value.trim();
-
-  if (!message) return;
-  if (!currentRoom) {
-    log("⚠️ Join a room first");
+  if (!value || !token || !username) {
+    log("⚠️ Must log in first!");
     return;
   }
+  currentRoom = value;
+  console.log("Sending join-room:", { room: currentRoom, username, token });
+  ws.send(JSON.stringify({ type: "join-room", room: currentRoom, username, token }));
+}
 
-  ws.send(JSON.stringify({
-    type: "chat",
-    message
-  }));
-
+function sendMessage() {
+  const message = messageInput.value.trim();
+  if (!message) return;
+  if (!currentRoom) { log("⚠️ Join a room first"); return; }
+  console.log("Sending chat:", { room: currentRoom, username, token, message });
+  ws.send(JSON.stringify({ type: "chat", message, room: currentRoom, username, token }));
   messageInput.value = "";
 }
 
-// ✅ Enter key support
-usernameInput.addEventListener("keypress", (e) => {
-  if (e.key === "Enter") {
-    e.preventDefault();
-    join();
-  }
-});
+roomInput.addEventListener("keypress", (e) => { if (e.key === "Enter") joinRoom(); });
+messageInput.addEventListener("keypress", (e) => { if (e.key === "Enter") sendMessage(); });
 
-roomInput.addEventListener("keypress", (e) => {
-  if (e.key === "Enter") {
-    e.preventDefault();
-    joinRoom();
-  }
-});
-
-messageInput.addEventListener("keypress", (e) => {
-  if (e.key === "Enter") {
-    e.preventDefault();
-    sendMessage();
-  }
-});
-
-// (optional) expose buttons if you have them
-window.join = join;
 window.joinRoom = joinRoom;
 window.sendMessage = sendMessage;
