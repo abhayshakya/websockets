@@ -95,7 +95,7 @@ export function setupWebSocket(wss) {
           }));
         });
 
-        console.log(`${ws.username} [${ws.currentRoom}]: ${message}`);
+        // console.log(`${ws.username} [${ws.currentRoom}]: ${message}`);
         return;
       }
     });
