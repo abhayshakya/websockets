@@ -104,6 +104,21 @@ export function setupWebSocket(wss) {
       if (ws.username && ws.currentRoom) {
         users.delete(ws.username);
         leaveChatRoom(ws.currentRoom, ws.username);
+
+        const timestamp = new Date().toISOString();
+        const roomUsers = getRoomUsers(ws.currentRoom);
+        
+        // Notify the remaining users in the room
+        roomUsers.forEach((user) => {
+          const client = users.get(user);
+          if (client?.readyState === WebSocket.OPEN) {
+            client.send(JSON.stringify({
+              type: "system",
+              message: `${ws.username} has left the chat`,
+              timestamp
+            }));
+          }
+        });
       }
     });
   });
