@@ -35,7 +35,7 @@ ws.onmessage = (event) => {
     case "chat-room": log(`🔵 ${data.username}: ${data.message}`); break;
     case "private": log(`🔒 ${data.username}: ${data.message}`); break;
     case "room-users": log(`👥 Room users: ${data.users.join(", ")}`); break;
-    default: log(`📩 ${JSON.stringify(data)}`);
+    default: log('📩 Welcome to One Time Chat');
   }
 };
 
