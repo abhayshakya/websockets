@@ -1,22 +1,11 @@
-import bcrypt from "bcrypt";
-import crypto from  "crypto";
-import { sessions } from "../../server.js";
-
-const users = {
-    test: bcrypt.hashSync("test1",10),
-    test2: bcrypt.hashSync("test2", 10)
-}
-
-export function validateLogin(username, password) {
-    if (!users[username]) return null;
-    const valid = bcrypt.compareSync(password, users[username]);
-    if (!valid) return null;
-
-    const token = crypto.randomUUID();
-    sessions.set(username, token);
-    return token;
-}
+import jwt from 'jsonwebtoken';
 
 export function validateToken(username, token) {
-        return sessions.get(username) === token;
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        // Verify both that the token is mathematically valid and matches the claimed user
+        return decoded.username === username;
+    } catch (err) {
+        return false;
     }
+}
