@@ -42,7 +42,7 @@ async function loginUser() {
 
           if (data.success) {
             token = data.token;
-            console.log("✅ Login successful, token received:", token);
+            console.log("✅ Login successful, token received");
             rlLogin.close();
             resolve();
           } else {
