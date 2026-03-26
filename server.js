@@ -9,6 +9,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import loginRoute from "./src/routes/login.js"
 import  registerRoute  from "./src/routes/register.js";
+import debugRoute from './src/routes/debug.js'
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -29,6 +30,7 @@ app.use(express.static(path.join(__dirname, "frontend")));
 
 app.use("/login", loginRoute);
 app.use("/register", registerRoute);
+app.use("/debug", debugRoute);
 
 setupWebSocket(wss);
 
