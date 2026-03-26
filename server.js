@@ -32,6 +32,10 @@ app.use("/register", registerRoute);
 
 setupWebSocket(wss);
 
+// Serve frontend folder as static
+app.use(express.static(path.join(__dirname, "frontend")));
+
+// Send index.html for root
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "frontend", "index.html"));
 });
