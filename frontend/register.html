@@ -66,6 +66,18 @@
         return;
       }
 
+      // validations
+      const existingUser = localStorage.getItem(username);
+      if (existingUser) {
+        alert("Username already exists");
+        return;
+      }
+
+      if (typeof password !== 'string' || password.length < 6) {
+        alert("Password must be at least 6 characters long");
+        return;
+      }
+
       fetch("/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -79,6 +91,10 @@
         }
       });
     }
+
+    //validations
+
+    
   </script>
 </body>
 </html>
