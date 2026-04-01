@@ -30,11 +30,16 @@ ws.onmessage = (event) => {
   catch { log("❌ Invalid message from server"); return; }
 
   switch (data.type) {
-    case "system": log(`⚙️ ${data.message}`); break;
-    case "self": log(`🟢 You: ${data.message}`); break;
-    case "chat-room": log(`🔵 ${data.username}: ${data.message}`); break;
-    case "private": log(`🔒 ${data.username}: ${data.message}`); break;
-    case "room-users": log(`👥 Room users: ${data.users.join(", ")}`); break;
+    case "system": log(`⚙️ ${data.message}`); 
+    break;
+    case "self": log(`🟢 You: ${data.message}`); 
+    break;
+    case "chat-room": log(`🔵 ${data.username}: ${data.message}`); 
+    break;
+    case "private": log(`🔒 ${data.username}: ${data.message}`); 
+    break;
+    case "room-users": log(`👥 Room users: ${data.users.join(", ")}`); 
+    break;
     default: log('📩 Welcome to One Time Chat');
   }
 };
@@ -54,7 +59,7 @@ function sendMessage() {
   const message = messageInput.value.trim();
   if (!message) return;
   if (!currentRoom) { log("⚠️ Join a room first"); return; }
-  console.log("Sending chat:", { room: currentRoom, username, token, message });
+  console.log("Sending chat:", { room: currentRoom, username, message });
   ws.send(JSON.stringify({ type: "chat", message, room: currentRoom, username, token }));
   messageInput.value = "";
 }
