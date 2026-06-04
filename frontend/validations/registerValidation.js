@@ -15,10 +15,5 @@ export function validatePassword(password) {
         return 'Password is required and must be atleast 6 characters';
     }
 
-    const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]+$/;
-    if(!passwordRegex.test(password)) {
-        return 'Password must contain at least one letter and one number';
-    }
-
     return null; // no errors
 }

@@ -9,7 +9,7 @@
   >
   <style>
     body {
-      background-color: #f8f9fa;
+      background-color: gray;
       display: flex;
       justify-content: center;
       align-items: center;
@@ -50,13 +50,27 @@
   <!-- Bootstrap JS (optional, for components) -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
-  <script>
+  <script type="module">
+    import { canAttemptLogin, validateLogin, recordFailedLogin } from "./validations/loginValidation.js";
+
     function login() {
       const username = document.getElementById("username").value.trim();
       const password = document.getElementById("password").value.trim();
 
       if (!username || !password) {
         alert("Username and password required");
+        return;
+      }
+
+      const lockCheck = canAttemptLogin(username);
+      if (lockCheck.locked) {
+        alert(lockCheck.message);
+        return;
+      }
+
+      const validationError = validateLogin(username, password);
+      if (validationError) {
+        alert(validationError);
         return;
       }
 
@@ -72,10 +86,17 @@
           localStorage.setItem("chatUser", username);
           window.location.href = "index.html";
         } else {
-          alert("Invalid credentials, Username/Password is incorrect");
+          const state = recordFailedLogin(username);
+          if (state.lockedUntil) {
+            alert("Too many failed login attempts. Your account is locked for 10 minutes.");
+          } else {
+            alert("Invalid credentials, Username/Password is incorrect");
+          }
         }
       });
     }
+
+    window.login = login;
   </script>
 </body>
 </html>
